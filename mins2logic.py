@@ -5,12 +5,24 @@
 import functools
 from pprint import pprint
 import logging
-logging.basicConfig(level=logging.WARN)
 
 import sys
 from os import linesep
 
 FILENAME = "./s.txt"
+
+DEBUG = True
+NOTOP = "!"
+OROP = " | "
+ANDOP = "&"
+#NOTOP = "~"
+#OROP = " + "
+#ANDOP = "&"
+if DEBUG:
+    #logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.WARN)
+else:
+    logging.basicConfig(level=logging.WARN)
 
 class Minterm(object):
     @staticmethod
@@ -59,9 +71,9 @@ class Minterm(object):
                 continue
             thischar = self.charshow(i)
             if c == "0":
-                thischar = "!" + thischar
+                thischar = NOTOP + thischar
             showchar.append(thischar)
-        return "&".join(showchar)
+        return ANDOP.join(showchar)
 
     def __eq__(self, mt2):
         s1 = "".join(self._current)
@@ -187,7 +199,8 @@ def simple_test():
     #mts = ["001", "011", "100", "101", "111", "110"]
     #mts = ["0000", "0001", "0010", "0100", "0011", "0101", "0110", "1100", "0111"]
     #mts = ["000", "001", "011", "100"]
-    mts = ["0000", "0010", "1000", "1010"]
+    #mts = ["0000", "0010", "1000", "1010"]
+    mts = ["10010", "00001"]
     #!B!D
     mts = map(lambda x: Minterm(x), mts)
     fastprint(get_finalmts(mts))
@@ -233,7 +246,7 @@ def main():
 
         for i in xrange(Milen):
             if currentmi[i] == "1":
-                Control_bits[i].append( (cyn, currentop) )
+                Control_bits[i].append( (0, currentop) )
 
         Status = 1
 
@@ -259,22 +272,26 @@ def main():
                     cyn += 1
                 else:
                     alert_and_exit(u"微指令长度不一致", i)
-
+        
+        if DEBUG:
+            pprint(Control_bits)
         lencyn = len(bin(Maxcyn)) - 2
 
         def char_show(num):
-            if num < Milen:
+            if num < Oplen:
                 return "O" + str(num)
             else:
-                return "Cy" + str(num - Milen)
+                return "Cy" + str(num - Oplen)
 
         for i in xrange(Milen):
             if not Control_bits[i]:
                 continue
-            minterms = map( lambda tup: Minterm(tup[1] + bin(tup[0])[2:].rjust(lencyn, "0"), char_show), Control_bits[i] )
+            #minterms = map( lambda tup: Minterm(tup[1] + bin(tup[0])[2:].rjust(lencyn, "0"), char_show), Control_bits[i] )
+            minterms = map( lambda tup: Minterm(tup[1] + bin(tup[0])[2:].rjust(lencyn, "0")), Control_bits[i] )
             print "CONTROL BIT %d:" % i
-            print "C%d = %s" % ( i, " + ".join(map(str, minterms)) )
-            print "   =", " + ".join( map(str, get_finalmts(minterms)) )
+            print "C%d = %s" % ( i, OROP.join(map(str, minterms)) )
+            print "   =", OROP.join( map(str, get_finalmts(minterms)) )
 
 if __name__ == '__main__':
     main()
+    #simple_test()
