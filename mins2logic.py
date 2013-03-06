@@ -11,16 +11,16 @@ from os import linesep
 
 FILENAME = "./s.txt"
 
-DEBUG = True
-NOTOP = "!"
-OROP = " | "
-ANDOP = "&"
-#NOTOP = "~"
-#OROP = " + "
+DEBUG = False
+#NOTOP = "!"
+#OROP = " | "
 #ANDOP = "&"
+NOTOP = "~"
+OROP = " + "
+ANDOP = "&"
 if DEBUG:
-    #logging.basicConfig(level=logging.DEBUG)
-    logging.basicConfig(level=logging.WARN)
+    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(level=logging.WARN)
 else:
     logging.basicConfig(level=logging.WARN)
 
@@ -286,8 +286,8 @@ def main():
         for i in xrange(Milen):
             if not Control_bits[i]:
                 continue
-            #minterms = map( lambda tup: Minterm(tup[1] + bin(tup[0])[2:].rjust(lencyn, "0"), char_show), Control_bits[i] )
-            minterms = map( lambda tup: Minterm(tup[1] + bin(tup[0])[2:].rjust(lencyn, "0")), Control_bits[i] )
+            minterms = map( lambda tup: Minterm(tup[1] + bin(tup[0])[2:].rjust(lencyn, "0"), char_show), Control_bits[i] )
+            #minterms = map( lambda tup: Minterm(tup[1] + bin(tup[0])[2:].rjust(lencyn, "0")), Control_bits[i] )
             print "CONTROL BIT %d:" % i
             print "C%d = %s" % ( i, OROP.join(map(str, minterms)) )
             print "   =", OROP.join( map(str, get_finalmts(minterms)) )
