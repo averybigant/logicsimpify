@@ -1,8 +1,13 @@
 #!/usr/bin/python
 #coding=utf-8
+#license: GPLv3
+#author: yurenbi
 import functools
 from pprint import pprint
-#import copy
+import logging
+import sys
+
+FILENAME = "./s.txt"
 
 class Minterm(object):
     @staticmethod
@@ -164,14 +169,26 @@ def fastprint(finalmts):
     for fmt in finalmts:
         print str(fmt)
 
-def main():
+def simple_debug():
     #mts = ["101", "001", "100", "111"]
     #mts = ["001", "011", "100", "101", "111", "110"]
-    #mts = ["0000", "0010", "1000", "1010"]
-    mts = ["0000", "0001", "0010", "0100", "0011", "0101", "0110", "1100", "0111"]
+    #mts = ["0000", "0001", "0010", "0100", "0011", "0101", "0110", "1100", "0111"]
+    #mts = ["000", "001", "011", "100"]
+    mts = ["0000", "0010", "1000", "1010"]
+    #!B!D
     mts = map(lambda x: Minterm(x), mts)
     fastprint(get_finalmts(mts))
 
+def main():
+    def alert_and_exit(ustr):
+        print ustr
+        sys.exit(1)
+
+    if len(sys.argv) > 1:
+        FILENAME = sys.argv[1]
+    with open(FILENAME, "rb") as f:
+        for line in f:
+            d
+
 if __name__ == '__main__':
     main()
-
