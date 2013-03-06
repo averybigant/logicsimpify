@@ -15,6 +15,7 @@ class Minterm(object):
         self._current = self._raw
         self._count1 = None
         self.charshow = show if show else Minterm._default_char_show
+        self._batch = -1
 
     def count1(self):
         if not self._count1:
@@ -30,11 +31,12 @@ class Minterm(object):
         diff = False
         assert len(minterm2) == len(self)
         for i in xrange(len(self._current)):
-            if self._current[i] != minterm2._current[i] and "x" not in (self._current[i], minterm2._current[i]):
+            if self._current[i] != minterm2._current[i] :
                 if diff:
                     return ()
                 diff = True
-                rmt._current.append("x")
+                if "x" not in (self._current[i], minterm2._current[i]):
+                    rmt._current.append("x")
             else:
                 rmt._current.append(self._current[i])
         return rmt
@@ -58,6 +60,7 @@ class Minterm(object):
         s2 = "".join(mt2._current)
         return s1 == s2
 
+
     def __hash__(self):
         s = "".join(self._current)
         return s.__hash__()
@@ -72,11 +75,13 @@ def con_all(l, isset=True):
     else:
         return ll
 
-def get_sublist(minterm, nlist):
+def get_sublist(minterm, nlist, current_batch):
     rset = set()
     for minterm2 in nlist:
         r = minterm - minterm2
+        #if r and not r == minterm:
         if r:
+            minterm2._batch = current_batch
             rset.add(r)
     return list(rset)
 
@@ -111,14 +116,18 @@ def split_conti(diclists, length):
 def reduce_single_conti(lists, finalmts=None):
     if finalmts==None:
         finalmts = []
+    lists = lists[:]
     while 1:
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         if len(lists) > 1:
             for i in xrange(1, len(lists)):
                 clist = []
                 get_sublist4mt = functools.partial(get_sublist, nlist=lists[i])
                 for mt in lists[i-1]:
-                    rmts = get_sublist4mt(mt)
-                    if len(rmts) == 0:
+                    rmts = get_sublist4mt(mt, current_batch=i)
+                    print "rmts: ", rmts
+                    if len(rmts) == 0 and mt._batch != i-1:
+                        print "fadd", mt
                         finalmts.append(mt)
                     else:
                         clist.extend(rmts)
@@ -157,8 +166,9 @@ def fastprint(finalmts):
 
 def main():
     #mts = ["101", "001", "100", "111"]
-    mts = ["001", "011", "100", "101", "111", "110"]
+    #mts = ["001", "011", "100", "101", "111", "110"]
     #mts = ["0000", "0010", "1000", "1010"]
+    mts = ["0000", "0001", "0010", "0100", "0011", "0101", "0110", "1100", "0111"]
     mts = map(lambda x: Minterm(x), mts)
     fastprint(get_finalmts(mts))
 
