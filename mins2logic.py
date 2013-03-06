@@ -5,7 +5,10 @@
 import functools
 from pprint import pprint
 import logging
+logging.basicConfig(level=logging.WARN)
+
 import sys
+from os import linesep
 
 FILENAME = "./s.txt"
 
@@ -58,7 +61,7 @@ class Minterm(object):
             if c == "0":
                 thischar = "!" + thischar
             showchar.append(thischar)
-        return "".join(showchar)
+        return "&".join(showchar)
 
     def __eq__(self, mt2):
         s1 = "".join(self._current)
@@ -72,13 +75,22 @@ class Minterm(object):
 
 def con_all(l, isset=True):
     ll = l[:]
-    reduce(lambda l1,l2: l1.extend(l2), ll, [])
+    reduce(lambda l1,l2: l1 + l2, ll, [])
     if len(ll) == 1 and type(ll) == list:
         ll = ll[0]
     if isset:
         return set(ll)
     else:
         return ll
+
+def expand_list(l):
+    l = list(l)
+    if not l:
+        return []
+    if type(l[0]) == list:
+        return expand_list(l[0]) + expand_list(l[1:])
+    else:
+        return [ l[0] ] + expand_list(l[1:])
 
 def get_sublist(minterm, nlist, current_batch):
     rset = set()
@@ -123,16 +135,16 @@ def reduce_single_conti(lists, finalmts=None):
         finalmts = []
     lists = lists[:]
     while 1:
-        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        logging.debug("whilelop>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         if len(lists) > 1:
             for i in xrange(1, len(lists)):
                 clist = []
                 get_sublist4mt = functools.partial(get_sublist, nlist=lists[i])
                 for mt in lists[i-1]:
                     rmts = get_sublist4mt(mt, current_batch=i)
-                    print "rmts: ", rmts
+                    logging.debug("rmts: %s" % str(rmts) )
                     if len(rmts) == 0 and mt._batch != i-1:
-                        print "fadd", mt
+                        logging.debug("add finalmts: %s" % str(mt))
                         finalmts.append(mt)
                     else:
                         clist.extend(rmts)
@@ -140,8 +152,7 @@ def reduce_single_conti(lists, finalmts=None):
                 lists[i-1] = clist
                 if i == len(lists) - 1:
                     del lists[-1]
-                print "cuurent"
-                pprint(lists)
+                logging.debug("lists: %s" % str(lists))
         elif lists:
             finalmts.extend(lists[0])
             break;
@@ -153,15 +164,17 @@ def get_finalmts(minterms):
     if not minterms:
         return []
     diclists = get_init_diclists(minterms)
-    pprint(diclists)
+    logging.debug("diclists:")
+    logging.debug(str(diclists))
     splists = split_conti(diclists, len(minterms[0]))
-    pprint(splists)
-    for l in splists:
-        print "<<<<<<<"
-        pprint(reduce_single_conti(l))
-        print "<<<<<<<"
+    logging.debug("splists:")
+    logging.debug(str(splists))
+    #for l in splists:
+        #print "<<<<<<<"
+        #pprint(reduce_single_conti(l))
+        #print "<<<<<<<"
     #pprint(map(reduce_single_conti, splists))
-    return con_all(map(reduce_single_conti, splists), False)
+    return expand_list(con_all(map(reduce_single_conti, splists), False))
 
 def fastprint(finalmts):
     print "====================="
@@ -169,7 +182,7 @@ def fastprint(finalmts):
     for fmt in finalmts:
         print str(fmt)
 
-def simple_debug():
+def simple_test():
     #mts = ["101", "001", "100", "111"]
     #mts = ["001", "011", "100", "101", "111", "110"]
     #mts = ["0000", "0001", "0010", "0100", "0011", "0101", "0110", "1100", "0111"]
@@ -179,16 +192,89 @@ def simple_debug():
     mts = map(lambda x: Minterm(x), mts)
     fastprint(get_finalmts(mts))
 
+
 def main():
-    def alert_and_exit(ustr):
+    global FILENAME
+    def alert_and_exit(ustr, linen):
         print ustr
+        print "line:", linen+1
         sys.exit(1)
+
+    def getline(line, linen):
+        line = line.replace(linesep, "").replace(" ", "")
+        for char in line:
+            if not (char == "1" or char == "0"):
+                alert_and_exit(u"只允许0或者1", linen)
+        return line
+
+    Control_bits = None
+    currentop = ""
+    currentmi = ""
+    Oplen = -1
+    Milen = -1
+    cyn = 1
+    Maxcyn = 1
+    Status = 0 #0 read OP, #1 read microinstruction
 
     if len(sys.argv) > 1:
         FILENAME = sys.argv[1]
     with open(FILENAME, "rb") as f:
-        for line in f:
-            d
+        currentop = getline(f.readline(), 0)
+        Oplen = len(currentop)
+        if len(currentop) < 1:
+            alert_and_exit(u"不允许空的OP", 0)
+
+        currentmi = getline(f.readline(), 0)
+        Milen = len(currentmi)
+        if len(currentmi) < 1:
+            alert_and_exit(u"不允许空的指令", 1)
+
+        Control_bits = [ [] for i in xrange(Milen) ]
+
+        for i in xrange(Milen):
+            if currentmi[i] == "1":
+                Control_bits[i].append( (cyn, currentop) )
+
+        Status = 1
+
+        for i, line in enumerate(f, 2):
+            if Status == 0:
+                currentop = getline(line, i)
+                if len(currentop) != Oplen:
+                    alert_and_exit(u"OP长度不一致", i)
+                cyn = 0
+                Status = 1
+            else:
+                currentmi = getline(line, i)
+                if len(currentmi) == 0:
+                    if cyn == 0:
+                        alert_and_exit(u"不允许空的指令", i)
+                    else:
+                        Maxcyn = max(Maxcyn, cyn-1)
+                        Status = 0
+                elif len(currentmi) == Milen:
+                    for i in xrange(Milen):
+                        if currentmi[i] == "1":
+                            Control_bits[i].append( (cyn, currentop) )
+                    cyn += 1
+                else:
+                    alert_and_exit(u"微指令长度不一致", i)
+
+        lencyn = len(bin(Maxcyn)) - 2
+
+        def char_show(num):
+            if num < Milen:
+                return "O" + str(num)
+            else:
+                return "Cy" + str(num - Milen)
+
+        for i in xrange(Milen):
+            if not Control_bits[i]:
+                continue
+            minterms = map( lambda tup: Minterm(tup[1] + bin(tup[0])[2:].rjust(lencyn, "0"), char_show), Control_bits[i] )
+            print "CONTROL BIT %d:" % i
+            print "C%d = %s" % ( i, " + ".join(map(str, minterms)) )
+            print "   =", " + ".join( map(str, get_finalmts(minterms)) )
 
 if __name__ == '__main__':
     main()
